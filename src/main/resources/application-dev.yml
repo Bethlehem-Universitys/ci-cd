@@ -1,0 +1,67 @@
+# Development Environment - H2 Database
+spring:
+  application:
+    name: payroll-dev
+  
+  # H2 Database (Development)
+  datasource:
+    url: jdbc:h2:mem:devdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA Configuration for H2
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # H2 Console for development
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Email Configuration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: rawang17@gmail.com
+    password: fswc bscf gnyb iewm
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# API Documentation (Enabled)
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs
+
+# JWT Configuration (Long expiration for development)
+security:
+  jwt:
+    secret: dev-jwt-secret-key-12345
+    expiration: 36000000  # 10 hours
+
+# Debug Logging
+logging:
+  level:
+    com.example.payroll: DEBUG
+    org.springframework.security: DEBUG
+
+# All management endpoints enabled
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

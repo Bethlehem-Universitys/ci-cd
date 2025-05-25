@@ -1,0 +1,81 @@
+# Production Environment - AWS RDS PostgreSQL
+spring:
+  application:
+    name: payroll-prod
+  
+  # AWS RDS PostgreSQL Database (Production)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/${DB_NAME:payroll_prod}
+    username: ${DB_USERNAME:payroll_user}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 300000
+  
+  # JPA Configuration for PostgreSQL
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate  # Don't modify schema in production
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 25
+
+  # Email Configuration (From environment variables)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# API Documentation (Enabled)
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true
+    path: /api-docs
+
+# JWT Configuration (Short expiration for security)
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: 1800000  # 30 minutes
+
+# Minimal logging for production
+logging:
+  level:
+    com.example.payroll: WARN
+    org.springframework.security: ERROR
+    root: ERROR
+
+# Minimal management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+# Production server settings
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+  error:
+    include-stacktrace: never
