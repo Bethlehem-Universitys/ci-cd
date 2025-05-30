@@ -149,16 +149,20 @@ jobs:
           aws ecs wait tasks-stopped --cluster payroll-app-cluster --tasks $CURRENT_TASK
         fi
         
+        # Get actual AWS Account ID dynamically
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo "Using AWS Account ID: $ACCOUNT_ID"
+        
         # Create production task definition with database
-        cat > prod-task-def.json << 'EOF'
+        cat > prod-task-def.json << EOF
         {
           "family": "payroll-app-task",
           "networkMode": "awsvpc",
           "requiresCompatibilities": ["FARGATE"],
           "cpu": "256",
           "memory": "512",
-          "executionRoleArn": "arn:aws:iam::912900213390:role/LabRole",
-          "taskRoleArn": "arn:aws:iam::912900213390:role/LabRole",
+          "executionRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/LabRole",
+          "taskRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/LabRole",
           "containerDefinitions": [
             {
               "name": "payroll-app",
@@ -190,13 +194,18 @@ jobs:
         }
         EOF
         
+        echo "✅ Task definition created with account ID: $ACCOUNT_ID"
+        
         # Register new task definition
         NEW_TASK_ARN=$(aws ecs register-task-definition --cli-input-json file://prod-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
+        echo "✅ Task definition registered: $NEW_TASK_ARN"
         
         # Get network configuration
         VPC_ID=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)
         SUBNET_IDS=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC_ID Name=map-public-ip-on-launch,Values=true --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
         SG_ID=$(aws ec2 describe-security-groups --filters Name=group-name,Values=payroll-sg --query 'SecurityGroups[0].GroupId' --output text)
+        
+        echo "Network config - VPC: $VPC_ID, Subnets: $SUBNET_IDS, SG: $SG_ID"
         
         # Run new task with database configuration
         NEW_TASK=$(aws ecs run-task \
@@ -205,6 +214,8 @@ jobs:
           --launch-type FARGATE \
           --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_IDS],securityGroups=[$SG_ID],assignPublicIp=ENABLED}" \
           --query 'tasks[0].taskArn' --output text)
+          
+        echo "✅ Task launched: $NEW_TASK"
           
         # Wait for task to be running
         aws ecs wait tasks-running --cluster payroll-app-cluster --tasks $NEW_TASK
