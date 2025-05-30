@@ -170,7 +170,7 @@ jobs:
               "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
               "environment": [
                 {"name": "SPRING_PROFILES_ACTIVE", "value": "prod"},
-                {"name": "SPRING_JPA_HIBERNATE_DDL_AUTO", "value": "update"},
+                {"name": "SPRING_JPA_HIBERNATE_DDL_AUTO", "value": "create"},
                 {"name": "DB_HOST", "value": "payroll-prod-db.cluug9r0tmdt.us-east-1.rds.amazonaws.com"},
                 {"name": "DB_NAME", "value": "payroll_prod"},
                 {"name": "DB_USERNAME", "value": "payroll_user"},
