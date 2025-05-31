@@ -16,11 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.payroll.departmentService.Department;
 import com.example.payroll.departmentService.DepartmentRepository;
 import com.example.payroll.exceptions.ResourceNotFoundException;
+import com.example.payroll.exceptions.UsernameAlreadyExistsException;
 import com.example.payroll.security.User;
 import com.example.payroll.security.UserRepository;
 
@@ -38,6 +40,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder; // Add this dependency
     @Override
     public CollectionModel<EntityModel<EmployeeDTO>> findAll() {
         List<EntityModel<EmployeeDTO>> employees = repository.findAll().stream() //
@@ -49,19 +53,47 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     }
 
-    @Override
-    public ResponseEntity<?> newEmployee(EmployeeDTO newEmployee) {
-        Department dep = departmentRepository.findByName(newEmployee.getDepartmentName())
-                .orElseThrow(() -> new ResourceNotFoundException("Department with Name "+ newEmployee.getDepartmentName() + " not found."));
+   @Override
+public ResponseEntity<?> newEmployee(EmployeeDTO newEmployee) {
+    Department dep = departmentRepository.findByName(newEmployee.getDepartmentName())
+            .orElseThrow(() -> new ResourceNotFoundException("Department with Name "+ newEmployee.getDepartmentName() + " not found."));
 
-        Employee employee = EmployeeMapper.toEntity(newEmployee, dep);
-        employee = repository.save(employee);
-        EntityModel<EmployeeDTO> entityModel = assembler.toModel(EmployeeMapper.toDTO(employee));
-
-        return ResponseEntity //
-                .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()) //
-                .body(entityModel);
+    // Create User if username and password are provided
+    User user = null;
+    if (newEmployee.getUsername() != null && newEmployee.getPassword() != null) {
+        // Check if user already exists
+        if (userRepository.findByUsername(newEmployee.getUsername()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Username already exists: " + newEmployee.getUsername());
+        }
+        
+        user = new User();
+        user.setUsername(newEmployee.getUsername());
+        user.setPassword(passwordEncoder.encode(newEmployee.getPassword())); // You'll need to inject PasswordEncoder
+        user.setRole("ROLE_USER"); // Default role for employees
+        user = userRepository.save(user);
+    } else {
+        // Create a default user account using email as username
+        if (userRepository.findByUsername(newEmployee.getEmail()).isPresent()) {
+            throw new UsernameAlreadyExistsException("User account already exists for email: " + newEmployee.getEmail());
+        }
+        
+        user = new User();
+        user.setUsername(newEmployee.getEmail());
+        user.setPassword(passwordEncoder.encode("defaultPassword123")); // You might want to generate a random password
+        user.setRole("ROLE_USER");
+        user = userRepository.save(user);
     }
+
+    Employee employee = EmployeeMapper.toEntity(newEmployee, dep);
+    employee.setUser(user); // Set the user relationship
+    employee = repository.save(employee);
+    
+    EntityModel<EmployeeDTO> entityModel = assembler.toModel(EmployeeMapper.toDTO(employee));
+
+    return ResponseEntity //
+            .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()) //
+            .body(entityModel);
+}
 
     @Override
     public ResponseEntity<?> findById(Long id) {
@@ -90,29 +122,40 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public ResponseEntity<?> save(EmployeeDTO newEmployee, Long id) {
-        Department dep = departmentRepository.findByName(newEmployee.getDepartmentName())
-                .orElseThrow(() -> new ResourceNotFoundException("Department with Name "+ newEmployee.getDepartmentName() + " not found."));
+public ResponseEntity<?> save(EmployeeDTO newEmployee, Long id) {
+    Department dep = departmentRepository.findByName(newEmployee.getDepartmentName())
+            .orElseThrow(() -> new ResourceNotFoundException("Department with Name "+ newEmployee.getDepartmentName() + " not found."));
 
-        Employee newEmploye = EmployeeMapper.toEntity(newEmployee, dep);
-        Employee updatedEmployee = repository.findById(id) //
-                .map(employee -> {
-                    employee.setName(newEmployee.getName());
-                    employee.setRole(newEmployee.getRole());
-                    employee.setEmail(newEmployee.getEmail());
-                    employee.setDepartment(dep);
-                    return repository.save(employee);
-                }) //
-                .orElseGet(() -> {
-                    return repository.save(newEmploye);
-                });
+    Employee newEmploye = EmployeeMapper.toEntity(newEmployee, dep);
+    Employee updatedEmployee = repository.findById(id) //
+            .map(employee -> {
+                employee.setName(newEmployee.getName());
+                employee.setRole(newEmployee.getRole());
+                employee.setEmail(newEmployee.getEmail());
+                employee.setDepartment(dep);
+                // Keep the existing user relationship
+                // employee.setUser() - don't change this during update
+                return repository.save(employee);
+            }) //
+            .orElseGet(() -> {
+                // For new employees, create user if needed
+                if (newEmploye.getUser() == null) {
+                    User user = new User();
+                    user.setUsername(newEmployee.getEmail());
+                    user.setPassword(passwordEncoder.encode("defaultPassword123"));
+                    user.setRole("ROLE_USER");
+                    user = userRepository.save(user);
+                    newEmploye.setUser(user);
+                }
+                return repository.save(newEmploye);
+            });
 
-        EntityModel<EmployeeDTO> entityModel = assembler.toModel(EmployeeMapper.toDTO(updatedEmployee));
+    EntityModel<EmployeeDTO> entityModel = assembler.toModel(EmployeeMapper.toDTO(updatedEmployee));
 
-        return ResponseEntity //
-                .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()) //
-                .body(entityModel);
-    }
+    return ResponseEntity //
+            .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()) //
+            .body(entityModel);
+}
 
     @Override
     public ResponseEntity<?> deleteById(Long id) {
