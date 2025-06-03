@@ -11,4 +11,5 @@ public interface EmployeeService {
     EntityModel<EmployeeDTO> findByEmail(String email);
     ResponseEntity<?> save(EmployeeDTO employee, Long id); 
     ResponseEntity<?> deleteById(Long id); 
+     CollectionModel<EntityModel<EmployeeDTO>> findByName(String name);
 }

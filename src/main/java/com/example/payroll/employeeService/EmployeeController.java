@@ -55,4 +55,16 @@ class EmployeeController {
   ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
     return employeeService.deleteById(id);
   }
+
+
+  // Updated EmployeeController.java - Add this method to the existing class
+@Operation(summary = "Get employees by name", description = "Fetches employees whose name contains the specified string (case-insensitive).")
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved employees"),
+    @ApiResponse(responseCode = "404", description = "No employees found with the specified name")
+})
+@GetMapping("/employees/name/{name}")
+CollectionModel<EntityModel<EmployeeDTO>> getEmployeesByName(@PathVariable String name) {
+    return employeeService.findByName(name);
+}
 }

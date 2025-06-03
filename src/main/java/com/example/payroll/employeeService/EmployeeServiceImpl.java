@@ -163,4 +163,14 @@ public ResponseEntity<?> save(EmployeeDTO newEmployee, Long id) {
         return ResponseEntity.noContent().build();
     }
 
+    @Override
+public CollectionModel<EntityModel<EmployeeDTO>> findByName(String name) {
+    List<EntityModel<EmployeeDTO>> employees = repository.findByNameContainingIgnoreCase(name).stream()
+            .map(EmployeeMapper::toDTO)
+            .map(assembler::toModel)
+            .collect(Collectors.toList());
+
+    return CollectionModel.of(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
+}
+
 }
