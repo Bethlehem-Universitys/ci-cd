@@ -1,9 +1,9 @@
 package com.example.payroll.security;
 
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import java.util.Date;
@@ -13,7 +13,14 @@ import java.util.function.Function;
 
 @Component
 public class JwtUtil {
-    private final String SECRET_KEY = "5dab7a23fbbd1f3eccb5ef839ac89af5fb6f0f0f5cc832209d8d459b15e4e4d5"; // Change this to a strong secret
+    
+    // Read secret from your YAML configuration structure
+    @Value("${security.jwt.secret:5dab7a23fbbd1f3eccb5ef839ac89af5fb6f0f0f5cc832209d8d459b15e4e4d5}")
+    private String secretKey;
+    
+    // Read expiration from your YAML configuration
+    @Value("${security.jwt.expiration:36000000}")
+    private long jwtExpiration;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -25,7 +32,7 @@ public class JwtUtil {
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = Jwts.parser()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(secretKey)
                 .parseClaimsJws(token)
                 .getBody();
         return claimsResolver.apply(claims);
@@ -41,8 +48,8 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
     }
 
@@ -60,9 +67,7 @@ public class JwtUtil {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7)) // 7 days
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
     }
-    
 }
-

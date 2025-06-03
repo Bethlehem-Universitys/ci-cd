@@ -47,11 +47,11 @@ springdoc:
   api-docs:
     path: /api-docs
 
-# JWT Configuration (Long expiration for development)
+# JWT Configuration - CONSISTENT WITH PRODUCTION
 security:
   jwt:
-    secret: dev-jwt-secret-key-12345
-    expiration: 36000000  # 10 hours
+    secret: ${JWT_SECRET:5dab7a23fbbd1f3eccb5ef839ac89af5fb6f0f0f5cc832209d8d459b15e4e4d5}
+    expiration: ${JWT_EXPIRATION:36000000}  # 10 hours for development
 
 # Debug Logging
 logging:

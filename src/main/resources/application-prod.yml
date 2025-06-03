@@ -19,7 +19,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate  # Don't modify schema in production
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}  # Allow override from environment
     show-sql: false
     properties:
       hibernate:
@@ -43,26 +43,26 @@ spring:
 # API Documentation (Enabled)
 springdoc:
   swagger-ui:
-    enabled: true
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:true}
     path: /swagger-ui.html
   api-docs:
-    enabled: true
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
     path: /api-docs
 
-# JWT Configuration (Short expiration for security)
+# JWT Configuration - FIXED to use consistent secret
 security:
   jwt:
-    secret: ${JWT_SECRET}
-    expiration: 1800000  # 30 minutes
+    secret: ${JWT_SECRET:5dab7a23fbbd1f3eccb5ef839ac89af5fb6f0f0f5cc832209d8d459b15e4e4d5}
+    expiration: ${JWT_EXPIRATION:1800000}  # 30 minutes
 
-# Minimal logging for production
+# Production logging - configurable
 logging:
   level:
-    com.example.payroll: WARN
-    org.springframework.security: ERROR
+    com.example.payroll: ${LOGGING_LEVEL_COM_EXAMPLE_PAYROLL:WARN}
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:ERROR}
     root: ERROR
 
-# Minimal management endpoints
+# Management endpoints
 management:
   endpoints:
     web:
